@@ -45,6 +45,8 @@ just lint       # Hadolint と ShellCheck を実行
 
 `docs-unit` は GitHub ホステッドランナーで Bats、Hadolint、ShellCheck を実行します。これが成功すると、プッシュ、手動実行、同じリポジトリからのプルリクエストでは、`gpu-smoke` がセルフホステッド GPU ランナーでアダプターをビルドしてテストします。有効にするには、リポジトリにランナーグループへのアクセスを許可し、リポジトリ変数 `GPU_RUNNER_ENABLED` を `true` に設定してください。
 
+マージキューが `checks_requested` タイプの `merge_group` イベントを送信したときも、ワークフローが実行されます。`docs-unit` は通常どおり結果を報告します。`docs-unit` が成功し、かつ `GPU_RUNNER_ENABLED` が `true` の場合、`gpu-smoke` は実行結果を報告します。それ以外の場合はスキップとして表示されます。最後に `gate` が両ジョブの結果を集約して報告します。リポジトリの所有者が `gate` を必須のステータスチェックに指定したルールセットを適用し、マージキューを有効にします。
+
 ## ライセンス
 
 [Apache-2.0](LICENSE)

@@ -45,6 +45,8 @@ Choose the official release tag and look up its manifest digest in NVIDIA's regi
 
 The hosted `docs-unit` job runs Bats, Hadolint and ShellCheck. After it passes, `gpu-smoke` builds and tests the adapter on a self-hosted GPU runner for pushes, manual runs and same-repository pull requests. Enable it by granting this repository access to the runner group and setting the repository variable `GPU_RUNNER_ENABLED` to `true`.
 
+The workflow also runs when the merge queue sends a `merge_group` event of type `checks_requested`. The `docs-unit` job reports its result as usual. If it passes and `GPU_RUNNER_ENABLED` is `true`, `gpu-smoke` runs and reports its result. Otherwise, it appears as skipped. The `gate` job reports the combined result. The repository owner applies the ruleset with `gate` as the required status check and enables the merge queue.
+
 ## License
 
 [Apache-2.0](LICENSE)

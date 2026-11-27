@@ -1,6 +1,6 @@
 # Static test inventory
 
-**15 bats tests**
+**18 bats tests**
 
 Run `just test` to execute the [repository layout spec](../../test/bats/smoke/repo_layout_spec.bats) in the test-tools container.
 
@@ -21,3 +21,6 @@ Run `just test` to execute the [repository layout spec](../../test/bats/smoke/re
 | 13 | The image smoke script is executable. |
 | 14 | The smoke script checks the passwd UID field for exactly one entry with UID 1000. |
 | 15 | The CI workflow references the organization's reusable GPU workflow. |
+| 16 | The CI workflow runs when the merge queue requests checks. |
+| 17 | The `gpu-smoke` job condition allows merge groups. |
+| 18 | The `gate` job always runs after `docs-unit` and `gpu-smoke`. |
