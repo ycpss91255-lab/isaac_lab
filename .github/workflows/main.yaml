@@ -1,0 +1,60 @@
+name: Main CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Resolve the test-tools image
+        run: docker pull ghcr.io/ycpss91255-lab/test-tools:latest
+      - name: Static bats specs
+        run: >-
+          docker run --rm -v "${PWD}":/work -w /work
+          ghcr.io/ycpss91255-lab/test-tools:latest bats test/bats/smoke
+      - name: Lint
+        run: >-
+          docker run --rm -v "${PWD}":/work -w /work
+          ghcr.io/ycpss91255-lab/test-tools:latest
+          sh -c 'hadolint --config .hadolint.yaml Dockerfile && shellcheck test/smoke/*.sh script/ci/*.sh'
+
+  # Pulling the 34 GB official image does not fit a hosted runner, so the
+  # build + container smoke runs on the self-hosted GPU runner through the org
+  # reusable workflow. The repo must be allowed in that runner group and the
+  # repository variable GPU_RUNNER_ENABLED set to 'true' (owner action);
+  # until then the job is skipped instead of queueing forever.
+  gpu-smoke:
+    needs: docs-unit
+    if: >-
+      vars.GPU_RUNNER_ENABLED == 'true' &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    uses: ycpss91255-lab/.github/.github/workflows/gpu-self-hosted.yml@v0.4.0
+    with:
+      run-script: ./script/ci/gpu_smoke_job.sh
+      timeout-minutes: 60
+
+  gate:
+    if: always()
+    needs: [docs-unit, gpu-smoke]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every needed job succeeded or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in ${RESULTS}; do
+            case "${r}" in
+              success|skipped) ;;
+              *) echo "job result: ${r}"; exit 1 ;;
+            esac
+          done
