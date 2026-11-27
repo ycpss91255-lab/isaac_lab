@@ -43,7 +43,7 @@ just lint       # 執行 Hadolint 與 ShellCheck
 
 ## 持續整合
 
-`docs-unit` 在 GitHub 託管的執行器上執行 Bats、Hadolint 與 ShellCheck。通過後，推送、手動執行及來自同一儲存庫的拉取請求可觸發 `gpu-smoke`，在自架 GPU 執行器上建置並測試適配層。若要啟用，請允許此儲存庫使用該執行器群組，並將儲存庫變數 `GPU_RUNNER_ENABLED` 設為 `true`。
+`docs-unit` 在 GitHub 託管的執行器上執行 Bats、Hadolint 與 ShellCheck。通過後，推送、手動執行、來自同一儲存庫的拉取請求及合併佇列發出的 `merge_group` 事件可觸發 `gpu-smoke`，在自架 GPU 執行器上建置並測試適配層。若要啟用，請允許此儲存庫使用該執行器群組，並將儲存庫變數 `GPU_RUNNER_ENABLED` 設為 `true`。
 
 當合併佇列發出類型為 `checks_requested` 的 `merge_group` 事件時，工作流程也會執行。`docs-unit` 照常回報結果。若 `docs-unit` 通過且 `GPU_RUNNER_ENABLED` 為 `true`，`gpu-smoke` 會執行並回報結果，否則會顯示為略過。最後由 `gate` 彙總並回報結果。儲存庫擁有者負責套用規則集，將 `gate` 設為必要狀態檢查，並啟用合併佇列。
 
