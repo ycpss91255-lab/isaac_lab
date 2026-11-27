@@ -45,6 +45,8 @@ just lint       # 运行 Hadolint 和 ShellCheck
 
 `docs-unit` 在 GitHub 托管的运行器上运行 Bats、Hadolint 和 ShellCheck。通过后，推送、手动运行和来自同一仓库的拉取请求可触发 `gpu-smoke`，在自托管 GPU 运行器上构建并测试适配层。要启用该任务，请允许此仓库使用该运行器组，并将仓库变量 `GPU_RUNNER_ENABLED` 设为 `true`。
 
+当合并队列发出类型为 `checks_requested` 的 `merge_group` 事件时，工作流也会运行。`docs-unit` 照常报告结果。如果 `docs-unit` 通过且 `GPU_RUNNER_ENABLED` 为 `true`，`gpu-smoke` 会运行并报告结果，否则会显示为已跳过。最后由 `gate` 汇总并报告结果。仓库所有者负责应用规则集，将 `gate` 设为必需的状态检查，并启用合并队列。
+
 ## 许可证
 
 [Apache-2.0](LICENSE)

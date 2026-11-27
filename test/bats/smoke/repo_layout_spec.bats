@@ -82,3 +82,23 @@ setup() {
 @test "CI workflow exists and GPU job goes through the org reusable workflow" {
   grep -q 'gpu-self-hosted.yml' "${ROOT}/.github/workflows/main.yaml"
 }
+
+@test "CI runs when the merge queue requests checks" {
+  local trigger
+  trigger="$(sed -n '/^on:/,/^permissions:/p' "${ROOT}/.github/workflows/main.yaml")"
+  [[ "${trigger}" == *$'\n  merge_group:\n    types: [checks_requested]'* ]]
+}
+
+@test "gpu-smoke does not exclude merge groups" {
+  local job
+  job="$(sed -n '/^  gpu-smoke:/,/^  gate:/p' "${ROOT}/.github/workflows/main.yaml")"
+  [[ "${job}" == *"github.event_name != 'pull_request'"* ]]
+  [[ "${job}" != *"merge_group"* ]]
+}
+
+@test "gate always runs after docs-unit and gpu-smoke" {
+  local job
+  job="$(sed -n '/^  gate:/,$p' "${ROOT}/.github/workflows/main.yaml")"
+  [[ "${job}" == *"if: always()"* ]]
+  [[ "${job}" == *"needs: [docs-unit, gpu-smoke]"* ]]
+}
