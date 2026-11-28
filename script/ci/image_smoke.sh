@@ -15,7 +15,8 @@ image="${1:?usage: image_smoke.sh <image>}"
 fail=0
 
 run_in() {
-  docker run --rm --gpus all --user "$(id -u):$(id -g)" \
+  # Docker drops supplementary groups with an explicit UID:GID. Retain the Lab image's group.
+  docker run --rm --gpus all --user "$(id -u):$(id -g)" --group-add 1000 \
     -e ACCEPT_EULA=Y -e PRIVACY_CONSENT=Y \
     --entrypoint bash "${image}" -c "$1"
 }
@@ -44,8 +45,7 @@ check "exactly one passwd entry for UID 1000" \
     exit 1
   }'
 
-uid_out="$(run_in 'id -u; id -g' 2>&1 || true)"
-if [ "${uid_out}" = "$(id -u)"$'\n'"$(id -g)" ]; then
+if uid_out="$(run_in 'id -u && id -g' 2>&1)" && [ "${uid_out}" = "$(id -u)"$'\n'"$(id -g)" ]; then
   echo "PASS user uid/gid equals host"
 else
   echo "FAIL user uid/gid equals host (got: ${uid_out})"

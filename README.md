@@ -2,50 +2,30 @@
 
 # isaac_lab
 
-This development image follows [isaac](https://github.com/ycpss91255-lab/isaac) with one change. The base is NVIDIA's official `nvcr.io/nvidia/isaac-lab` image, which bundles Isaac Sim 6.2 and Isaac Lab 3.0.0. Upstream uses `nvcr.io/nvidia/isaac-sim`.
+A development image for Isaac Lab 3.0.0 and Isaac Sim 6.2. The Dockerfile starts from NVIDIA's official Isaac Lab distribution. The `.base/` subtree supplies the shared Docker wrappers and just recipes. [Architecture decision](doc/adr/0002-independent-lab-image.md)
 
-## How the image is built
+## Build and run
 
-The [Dockerfile](Dockerfile) builds the `lab-base` adapter. It removes the duplicate passwd entry for UID 1000 and sets `ISAACLAB_PATH`. The `isaac/` submodule pins upstream to a commit. The experimental `just build-isaac` first builds the adapter, then passes its image tag to `isaac/Dockerfile` through `BASE_IMAGE` and builds the upstream `devel` target. See the [architecture decision](doc/adr/0001-image-only-difference-from-isaac.md).
-
-For local development only, container names use the `cc-lab-` prefix and image names use `ycpss91255/cc-`.
-
-## Quick start
-
-Install Git, just and Docker. The smoke check also needs an NVIDIA GPU accessible to Docker.
+Install Git, just and Docker with the Compose plugin. For GPU workloads, configure the NVIDIA container runtime. From the repository root, build and enter the development container.
 
 ```sh
-just submodule  # Initialize the pinned upstream checkout
-just build      # Build the lab-base adapter
-just smoke      # Check imports, CUDA, UID/GID and the UID 1000 entry
-just test       # Run the static Bats suite
-just lint       # Run Hadolint and ShellCheck
+just docker build
+just docker run
 ```
 
-## Run Python
+The container uses your host UID and GID. Your workspace is mounted at `~/work`, and Kit and NVIDIA caches persist under `isaac-sim/` in the workspace. For a background container without a display, run `just docker build headless` and `just docker run -t headless -d`.
 
-Inside the container, use the Isaac Lab launcher to select the environment containing Isaac Lab and PyTorch. The Isaac Sim launcher `/isaac-sim/python.sh` uses a different environment.
+Inside the container, run Python through the bundled Isaac Lab launcher to use its PyTorch environment.
 
 ```sh
 "${ISAACLAB_PATH}/isaaclab.sh" -p -c 'import isaaclab, isaacsim, torch; print(torch.cuda.is_available())'
 ```
 
-## Update the base image
+## Checks and updates
 
-The current pin is `nvcr.io/nvidia/isaac-lab:3.0.0@sha256:f70acc9ed3bc3fc67099a0c5715379c432cc9965623cabbaf54f74599997e245`.
+The hosted `static` job runs Bats, Hadolint and ShellCheck. On an NVIDIA host, run `script/ci/gpu_smoke_job.sh` to build the `devel-test` stage and check imports, CUDA and user identity. CI enables this job for trusted runs, including the merge queue, when the repository has GPU runner access and `GPU_RUNNER_ENABLED=true`. The required check is `gate`. [Test inventory and commands](doc/test/TEST.md)
 
-Choose the official release tag and look up its manifest digest in NVIDIA's registry. Update both values in the Dockerfile's `ARG BASE_IMAGE`, update the pin in all four READMEs, then run `just build`, `just smoke`, `just test` and `just lint`.
-
-## Pending upstream changes
-
-- **isaac#474** will create the container user with the host UID/GID. Once it merges, update the submodule pin to inherit that behavior. User creation stays upstream.
-- Upstream still installs Isaac Lab in its `sys`/`devel` build and plans to remove that step. `just build-isaac` remains experimental until the pinned commit includes the removal.
-
-## CI
-
-The hosted `docs-unit` job runs Bats, Hadolint and ShellCheck. After it passes, `gpu-smoke` builds and tests the adapter on a self-hosted GPU runner for pushes, manual runs, same-repository pull requests and `merge_group` events from the merge queue. Enable it by granting this repository access to the runner group and setting the repository variable `GPU_RUNNER_ENABLED` to `true`.
-
-The workflow also runs when the merge queue sends a `merge_group` event of type `checks_requested`. The `docs-unit` job reports its result as usual. If it passes and `GPU_RUNNER_ENABLED` is `true`, `gpu-smoke` runs and reports its result. Otherwise, it appears as skipped. The `gate` job reports the combined result. The repository owner applies the ruleset with `gate` as the required status check and enables the merge queue.
+To update the image, change the NVIDIA release tag and manifest digest together in `ARG BASE_IMAGE` in the Dockerfile, update the pin assertion, then rerun the static and GPU checks.
 
 ## License
 

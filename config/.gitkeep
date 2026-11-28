@@ -1,0 +1,37 @@
+# Placeholder so this directory exists in git. This directory is read
+# TWICE, at two moments, and what you put where decides which.
+#
+# 1. Template overrides, at BUILD time. The Dockerfile's layered COPY
+#    reads .base/dist/config/ first, then overlays <repo>/config/ on top,
+#    into /tmp/config -- which is deleted in the same RUN. Drop a file
+#    here only to override a specific template default
+#    (e.g. <repo>/config/shell/bashrc to override the template's bashrc,
+#    or <repo>/config/shell/bashrc.d/your-snippet.sh to add a drop-in).
+#    Files NOT placed here keep flowing through from .base/dist/config/
+#    on every build.
+#
+# 2. YOUR APP'S OWN CONFIG, in a directory of its own: config/<component>/
+#    (config/realsense/, config/ros1_bridge/). Every such directory is
+#    bind-mounted at /opt/app/config/<component> in development -- edit on
+#    the host, restart, no rebuild -- and COPY-baked at the same path into
+#    a deployable image, which is how one config survives both. A regular
+#    file sitting directly under config/ gets NEITHER;
+#    `just docker setup apply` warns about it by name.
+#
+#    Inside config/<component>/, group by kind only once a kind has more
+#    than one file. Name a copy-me template <name>.example.<ext>, keeping
+#    the real extension last. Do NOT add an audience level
+#    (official/custom/internal/): which files a field operator may retune
+#    is declared in config/<component>/deploy.manifest, one section per
+#    deployable stage, and a directory that says it too can only disagree.
+#    A file kept only to be diffed against upstream is a test fixture, not
+#    config -- keep it out of config/, or it is mounted and baked for
+#    nothing.
+#
+#    When a component ships several curated presets and the repo bakes one
+#    of them, say WHICH with a committed repo-root symlink into
+#    config/<component>/ -- e.g. camera.yaml -> config/realsense/yaml/none.yaml
+#    -- and COPY it through a build ARG whose default is that symlink's
+#    name, so `--build-arg` overrides one build without touching the tree.
+#    `just docker setup apply` names every selector and the preset it
+#    currently points at.
