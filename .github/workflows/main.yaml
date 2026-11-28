@@ -12,22 +12,22 @@ permissions:
   contents: read
 
 jobs:
-  docs-unit:
+  static:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Resolve the test-tools image
-        run: docker pull ghcr.io/ycpss91255-lab/test-tools:latest
+        run: docker pull ghcr.io/ycpss91255-lab/test-tools:v0.43.0-rc7
       - name: Static bats specs
         run: >-
           docker run --rm -v "${PWD}":/work -w /work
-          ghcr.io/ycpss91255-lab/test-tools:latest bats test/bats/smoke
+          ghcr.io/ycpss91255-lab/test-tools:v0.43.0-rc7 bats test/bats/static
       - name: Lint
         run: >-
           docker run --rm -v "${PWD}":/work -w /work
-          ghcr.io/ycpss91255-lab/test-tools:latest
-          sh -c 'hadolint --config .hadolint.yaml Dockerfile && shellcheck test/smoke/*.sh script/ci/*.sh'
+          ghcr.io/ycpss91255-lab/test-tools:v0.43.0-rc7
+          sh -c 'hadolint --config .hadolint.yaml Dockerfile && shellcheck script/entrypoint.sh script/ci/*.sh script/hooks/*/*.sh script/local/*.sh'
 
   # Pulling the 34 GB official image does not fit a hosted runner, so the
   # build + container smoke runs on the self-hosted GPU runner through the org
@@ -35,7 +35,7 @@ jobs:
   # repository variable GPU_RUNNER_ENABLED set to 'true' (owner action);
   # until then the job is skipped instead of queueing forever.
   gpu-smoke:
-    needs: docs-unit
+    needs: static
     if: >-
       vars.GPU_RUNNER_ENABLED == 'true' &&
       (github.event_name != 'pull_request' ||
@@ -47,7 +47,7 @@ jobs:
 
   gate:
     if: always()
-    needs: [docs-unit, gpu-smoke]
+    needs: [static, gpu-smoke]
     runs-on: ubuntu-latest
     steps:
       - name: Every needed job succeeded or was skipped

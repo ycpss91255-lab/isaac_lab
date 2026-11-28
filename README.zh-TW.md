@@ -2,50 +2,30 @@
 
 # isaac_lab
 
-這個開發映像檔與上游 [isaac](https://github.com/ycpss91255-lab/isaac) 的唯一差異是基底映像檔。此處採用 NVIDIA 官方的 `nvcr.io/nvidia/isaac-lab`，內含 Isaac Sim 6.2 與 Isaac Lab 3.0.0。上游使用 `nvcr.io/nvidia/isaac-sim`。
+本映像檔提供 Isaac Lab 3.0.0 與 Isaac Sim 6.2 的開發環境。Dockerfile 以 NVIDIA 官方 Isaac Lab 映像檔為基底，Docker 包裝腳本與 just 指令則由 `.base/` 子樹提供。[架構決策紀錄](doc/adr/0002-independent-lab-image.md)
 
-## 映像檔的建置方式
+## 建置與執行
 
-[Dockerfile](Dockerfile) 建置 `lab-base` 適配層，移除 UID 1000 重複的 passwd 紀錄，並設定 `ISAACLAB_PATH`。`isaac/` 子模組將上游版本固定在特定提交。實驗性的 `just build-isaac` 會先建置適配層，再透過 `BASE_IMAGE` 將其映像檔標籤傳給 `isaac/Dockerfile`，建置上游的 `devel` 目標。詳見[架構決策紀錄](doc/adr/0001-image-only-difference-from-isaac.md)。
-
-容器名稱前綴 `cc-lab-` 與映像檔名稱前綴 `ycpss91255/cc-` 僅供本機開發使用。
-
-## 快速開始
-
-請先安裝 Git、just 與 Docker。執行煙霧測試還需要 Docker 能存取的 NVIDIA GPU。
+安裝 Git、just 與含 Compose 外掛程式的 Docker。若要使用 GPU，請先設定 NVIDIA 容器執行環境。在儲存庫根目錄執行下列指令，建置並進入開發容器。
 
 ```sh
-just submodule  # 初始化子模組，取出指定版本的上游原始碼
-just build      # 建置 lab-base 適配層
-just smoke      # 檢查模組匯入、CUDA、UID/GID 與 UID 1000 的紀錄
-just test       # 執行 Bats 靜態測試
-just lint       # 執行 Hadolint 與 ShellCheck
+just docker build
+just docker run
 ```
 
-## 執行 Python
+容器使用與主機相同的 UID 和 GID，工作區掛載於 `~/work`。Kit 與 NVIDIA 的快取會保存在工作區的 `isaac-sim/` 目錄。若要在背景執行無圖形介面的容器，請依序執行 `just docker build headless` 與 `just docker run -t headless -d`。
 
-在容器內使用 Isaac Lab 啟動腳本，即可選用含有 Isaac Lab 與 PyTorch 的 Python 環境。Isaac Sim 的 `/isaac-sim/python.sh` 使用另一個環境。
+在容器內透過 Isaac Lab 隨附的啟動腳本執行 Python，即可使用內建的 PyTorch 環境。
 
 ```sh
 "${ISAACLAB_PATH}/isaaclab.sh" -p -c 'import isaaclab, isaacsim, torch; print(torch.cuda.is_available())'
 ```
 
-## 更新基底映像檔
+## 測試與更新
 
-目前固定使用 `nvcr.io/nvidia/isaac-lab:3.0.0@sha256:f70acc9ed3bc3fc67099a0c5715379c432cc9965623cabbaf54f74599997e245`。
+`static` 工作會執行 Bats、Hadolint 與 ShellCheck。在配備 NVIDIA GPU 的主機上執行 `script/ci/gpu_smoke_job.sh`，即可建置 `devel-test` 階段並檢查套件匯入、CUDA 與使用者身分。儲存庫取得 GPU 執行器存取權並設定 `GPU_RUNNER_ENABLED=true` 後，受信任的 CI 執行（含合併佇列）會進行 GPU 測試。`gate` 彙整結果，作為必要檢查。[測試清單與指令](doc/test/TEST.md)
 
-選定官方版本標籤後，從 NVIDIA 的映像檔登錄服務查出對應的 manifest digest。在 Dockerfile 的 `ARG BASE_IMAGE` 同時更新標籤與 digest，並更新四份 README 中的映像檔版本與 digest，然後執行 `just build`、`just smoke`、`just test` 與 `just lint`。
-
-## 待上游完成的變更
-
-- **isaac#474** 將依主機的 UID/GID 建立容器使用者。合併後，更新子模組指向的提交即可採用此功能。使用者建立邏輯由上游維護。
-- 上游目前仍在 `sys`/`devel` 建置過程中安裝 Isaac Lab，並計畫移除此步驟。在子模組更新至包含該變更的提交之前，`just build-isaac` 維持實驗性質。
-
-## 持續整合
-
-`docs-unit` 在 GitHub 託管的執行器上執行 Bats、Hadolint 與 ShellCheck。通過後，推送、手動執行、來自同一儲存庫的拉取請求及合併佇列發出的 `merge_group` 事件可觸發 `gpu-smoke`，在自架 GPU 執行器上建置並測試適配層。若要啟用，請允許此儲存庫使用該執行器群組，並將儲存庫變數 `GPU_RUNNER_ENABLED` 設為 `true`。
-
-當合併佇列發出類型為 `checks_requested` 的 `merge_group` 事件時，工作流程也會執行。`docs-unit` 照常回報結果。若 `docs-unit` 通過且 `GPU_RUNNER_ENABLED` 為 `true`，`gpu-smoke` 會執行並回報結果，否則會顯示為略過。最後由 `gate` 彙總並回報結果。儲存庫擁有者負責套用規則集，將 `gate` 設為必要狀態檢查，並啟用合併佇列。
+升級映像檔時，請一併修改 Dockerfile 中 `ARG BASE_IMAGE` 的 NVIDIA 版本標籤與映像檔資訊清單摘要，更新測試中的固定版本，再重新執行靜態檢查與 GPU 測試。
 
 ## 授權條款
 

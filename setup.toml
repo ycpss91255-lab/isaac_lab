@@ -1,0 +1,65 @@
+[[image.rules]]
+rule = "string:isaac_lab"
+
+[[build.args]]
+key = "APT_MIRROR_UBUNTU"
+value = "tw.archive.ubuntu.com"
+
+[[build.args]]
+key = "APT_MIRROR_DEBIAN"
+value = "mirror.twds.com.tw"
+
+[[build.args]]
+key = "TZ"
+value = "Asia/Taipei"
+
+[network]
+mode = "host"
+ipc = "host"
+
+[deploy]
+gpu_mode = "auto"
+gpu_capabilities = "all"
+
+[environment]
+env_1 = "ACCEPT_EULA=Y"
+env_2 = "PRIVACY_CONSENT=Y"
+
+[[volumes]]
+source = "${WS_PATH}"
+target = "/home/${USER_NAME}/work"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/kit/cache"
+target = "/isaac-sim/kit/cache"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/kit/data"
+target = "/isaac-sim/kit/data"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/kit/logs"
+target = "/isaac-sim/kit/logs"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/ov/cache"
+target = "/home/${USER_NAME}/.cache/ov"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/pip"
+target = "/home/${USER_NAME}/.cache/pip"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/nvidia/glcache"
+target = "/home/${USER_NAME}/.cache/nvidia/GLCache"
+
+[[volumes]]
+source = "${WS_PATH}/isaac-sim/nvidia/computecache"
+target = "/home/${USER_NAME}/.nv/ComputeCache"
+
+["stage:devel-test"]
+"deploy.gpu_mode" = "force"
+"gui.mode" = "off"
+
+["stage:headless"]
+"gui.mode" = "off"

@@ -1,6 +1,6 @@
 # 0001. Change the Isaac base image through a pinned submodule
 
-**Status** Accepted  
+**Status** Superseded by [ADR 0002](0002-independent-lab-image.md)  
 **Date** 2026-11-27
 
 ## Context
