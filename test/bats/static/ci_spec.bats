@@ -40,16 +40,19 @@ setup() {
   [ -x script/ci/gpu_smoke_job.sh ]
 }
 
-@test "the GPU job builds devel-test through just before passing the image to smoke" {
+@test "the GPU job builds devel-test through the base build wrapper before passing the image to smoke" {
   local job
   job="$(sed '/^[[:space:]]*#/d' script/ci/gpu_smoke_job.sh | sed ':a; /\\$/ {N; s/\\\n/ /; ba;}')"
   # The base wrapper builds Compose service names. Service test targets Dockerfile stage devel-test.
+  # The GPU runner has no just, so the job calls the wrapper that `just docker build` runs (isaac does the same).
   awk '
-    /just[[:space:]]+docker[[:space:]]+build[[:space:]]+((-t|--target)[[:space:]]+)?test[[:space:]]*$/ {build = NR}
+    /(^|[[:space:]])(\.\/)?script\/build\.sh[[:space:]]+((-t|--target)[[:space:]]+)?test[[:space:]]*$/ {build = NR}
     /script\/ci\/image_smoke\.sh["\047]?[[:space:]]+[^[:space:]#]/ {smoke = NR}
     END {exit !(build && smoke > build)}
   ' <<< "$job"
   run grep -E '(^|[;&][[:space:]]*)[[:space:]]*docker[[:space:]]+(buildx[[:space:]]+)?build[[:space:]]' <<< "$job"
+  [ "$status" -eq 1 ]
+  run grep -E '(^|[;&[:space:]])just[[:space:]]' <<< "$job"
   [ "$status" -eq 1 ]
 }
 
